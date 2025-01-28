@@ -17,9 +17,11 @@ const Dashboard = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [apps, setApps] = useState([]); // List of apps fetched from backend
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteSuccess, setDeleteSuccess] = useState(""); 
+  const [deleteSuccess, setDeleteSuccess] = useState("");
   const [toastMessage, setToastMessage] = useState(""); // State for toast message
   const [toastVisible, setToastVisible] = useState(false); // State to control visibility of the toast
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [appToDelete, setAppToDelete] = useState(null); // App to delete
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,10 +63,14 @@ const Dashboard = () => {
   // Filter apps based on search term (null/undefined safe)
   const filteredApps = apps.filter((app) => {
     return (
-      (app.appName && app.appName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (app.osType && app.osType.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (app.releaseType && app.releaseType.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (app.platformType && app.platformType.toLowerCase().includes(searchTerm.toLowerCase()))
+      (app.appName &&
+        app.appName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (app.osType &&
+        app.osType.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (app.releaseType &&
+        app.releaseType.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (app.platformType &&
+        app.platformType.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
 
@@ -79,7 +85,7 @@ const Dashboard = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Delete an app
-  const handleDeleteApp = async (appId) => {
+  const handleDeleteApp = async () => {
     const token = Cookies.get("accessToken");
     if (!token) {
       console.log("Access token is missing!");
@@ -94,7 +100,7 @@ const Dashboard = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`, // Authorization header
           },
-          data: { _id: appId }, // Send appId as a JSON object
+          data: { _id: appToDelete._id }, // Send appId as a JSON object
         }
       );
       console.log("App deleted successfully:", response.data);
@@ -103,6 +109,8 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error deleting app:", error);
       showToast("Error deleting app"); // Show error message
+    } finally {
+      setIsModalOpen(false); // Close the modal after action
     }
   };
 
@@ -168,6 +176,16 @@ const Dashboard = () => {
     }, 5000);
   };
 
+  const openDeleteModal = (app) => {
+    setAppToDelete(app);
+    setIsModalOpen(true); // Open the modal
+  };
+
+  const closeDeleteModal = () => {
+    setIsModalOpen(false); // Close the modal
+    setAppToDelete(null); // Clear selected app
+  };
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -178,7 +196,9 @@ const Dashboard = () => {
         {/* Header with App Title and Button */}
         <div className="w-full bg-white shadow-md p-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-center text-gray-800">Apps</h2>
+            <h2 className="text-2xl font-semibold text-center text-gray-800">
+              Apps
+            </h2>
             <Button onClick={toggleSheet}>Add New App</Button>
           </div>
         </div>
@@ -193,37 +213,7 @@ const Dashboard = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select
-              value={selectedOS}
-              onChange={(e) => setSelectedOS(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white w-full sm:max-w-xs"
-            >
-              <option value="">Select OS</option>
-              <option value="ios">iOS</option>
-              <option value="android">Android</option>
-            </select>
-            <select
-              value={releaseType}
-              onChange={(e) => setReleaseType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white w-full sm:max-w-xs"
-            >
-              <option value="">Release Type</option>
-              <option value="Alpha">Alpha</option>
-              <option value="Beta">Beta</option>
-              <option value="Enterprise">Enterprise</option>
-              <option value="Production">Production</option>
-              <option value="Store">Store</option>
-            </select>
-            <select
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white w-full sm:max-w-xs"
-            >
-              <option value="">Select Platform</option>
-              <option value="java">Java</option>
-              <option value="kotlin">Kotlin</option>
-              <option value="react-native">React Native</option>
-            </select>
+  
           </div>
         </div>
 
@@ -232,11 +222,21 @@ const Dashboard = () => {
           <table className="min-w-full table-auto border-separate border-spacing-0 border border-gray-300">
             <thead className="bg-gray-200">
               <tr>
-                <th className="px-4 py-2 text-left border-b border-gray-300">App Name</th>
-                <th className="px-4 py-2 text-left border-b border-gray-300">OS</th>
-                <th className="px-4 py-2 text-left border-b border-gray-300">Release Type</th>
-                <th className="px-4 py-2 text-left border-b border-gray-300">Platform</th>
-                <th className="px-4 py-2 text-left border-b border-gray-300">Actions</th>
+                <th className="px-4 py-2 text-left border-b border-gray-300">
+                  App Name
+                </th>
+                <th className="px-4 py-2 text-left border-b border-gray-300">
+                  OS
+                </th>
+                <th className="px-4 py-2 text-left border-b border-gray-300">
+                  Release Type
+                </th>
+                <th className="px-4 py-2 text-left border-b border-gray-300">
+                  Platform
+                </th>
+                <th className="px-4 py-2 text-left border-b border-gray-300">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -244,16 +244,25 @@ const Dashboard = () => {
                 currentApps.map((app, index) => (
                   <tr key={index} className="bg-white hover:bg-gray-50">
                     <td className="px-4 py-2 border-b border-gray-300">
-                      <Link to={`/releases/${app.appName}/${app._id}`} className="text-blue-500 hover:underline">
+                      <Link
+                        to={`/releases/${app.appName}/${app._id}`}
+                        className="text-blue-500 hover:underline"
+                      >
                         {app.appName}
                       </Link>
                     </td>
-                    <td className="px-4 py-2 border-b border-gray-300">{app.osType}</td>
-                    <td className="px-4 py-2 border-b border-gray-300">{app.releaseType}</td>
-                    <td className="px-4 py-2 border-b border-gray-300">{app.platformType}</td>
+                    <td className="px-4 py-2 border-b border-gray-300">
+                      {app.osType}
+                    </td>
+                    <td className="px-4 py-2 border-b border-gray-300">
+                      {app.releaseType}
+                    </td>
+                    <td className="px-4 py-2 border-b border-gray-300">
+                      {app.platformType}
+                    </td>
                     <td className="px-4 py-2 border-b border-gray-300">
                       <button
-                        onClick={() => handleDeleteApp(app._id)} // Pass app._id to handleDeleteApp
+                        onClick={() => openDeleteModal(app)} // Pass app._id to handleDeleteApp
                         className="text-black hover:text-red-700"
                       >
                         <TrashIcon className="h-5 w-5" />
@@ -263,7 +272,10 @@ const Dashboard = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-4 py-2 border-b border-gray-300 text-center">
+                  <td
+                    colSpan="5"
+                    className="px-4 py-2 border-b border-gray-300 text-center"
+                  >
                     No apps available
                   </td>
                 </tr>
@@ -274,20 +286,34 @@ const Dashboard = () => {
 
         {/* Pagination Controls */}
         <div className="flex justify-between items-center p-4">
-          <Button onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)} disabled={currentPage === 1}>
+          <Button
+            onClick={() =>
+              setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)
+            }
+            disabled={currentPage === 1}
+          >
             Previous
           </Button>
           <span className="text-sm text-gray-600">
             Page {currentPage} of {totalPages}
           </span>
-          <Button onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)} disabled={currentPage === totalPages}>
+          <Button
+            onClick={() =>
+              setCurrentPage(
+                currentPage < totalPages ? currentPage + 1 : totalPages
+              )
+            }
+            disabled={currentPage === totalPages}
+          >
             Next
           </Button>
         </div>
 
         {/* Side Sheet */}
         <div
-          className={`fixed top-0 right-0 h-full bg-white w-80 shadow-lg transition-transform transform ${isSheetOpen ? "translate-x-0" : "translate-x-full"} ease-in-out duration-300`}
+          className={`fixed top-0 right-0 h-full bg-white w-80 shadow-lg transition-transform transform ${
+            isSheetOpen ? "translate-x-0" : "translate-x-full"
+          } ease-in-out duration-300`}
         >
           <div className="flex justify-between items-center p-4 border-b">
             <h2 className="text-lg font-semibold">Add New App</h2>
@@ -322,7 +348,9 @@ const Dashboard = () => {
 
               {/* Release Type */}
               <div className="mb-4">
-                <label className="block text-sm font-medium">Release Type</label>
+                <label className="block text-sm font-medium">
+                  Release Type
+                </label>
                 <select
                   value={releaseType}
                   onChange={(e) => setReleaseType(e.target.value)}
@@ -367,7 +395,9 @@ const Dashboard = () => {
 
               {/* Platform */}
               <div className="mb-4">
-                <label className="block text-sm font-medium">Platform Type</label>
+                <label className="block text-sm font-medium">
+                  Platform Type
+                </label>
                 <select
                   value={selectedPlatform}
                   onChange={(e) => setSelectedPlatform(e.target.value)}
@@ -394,6 +424,22 @@ const Dashboard = () => {
       {toastVisible && (
         <div className="fixed top-0 left-1/2 transform -translate-x-1/2 bg-black text-white p-4 rounded-md shadow-lg">
           {toastMessage}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-md shadow-lg max-w-sm w-full">
+            <h3 className="text-lg font-semibold">Are you sure?</h3>
+            <p className="mt-2">Do you want to delete this app?</p>
+            <div className="mt-4 flex justify-between">
+              <Button onClick={closeDeleteModal}>Cancel</Button>
+              <Button onClick={handleDeleteApp} className="bg-red-500">
+                Confirm
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
